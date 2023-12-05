@@ -1,0 +1,75 @@
+version: '3.7'  # Версия docker-compose
+
+services:
+  db:  # Настройки для сервиса базы данных
+    restart: always  # Перезапустить контейнер при его аварийном завершении
+    image: postgres:15  # Используем образ PostgreSQL версии 15
+    user: ${POSTGRES_USER}  # Имя пользователя из переменной окружения POSTGRES_USER
+    container_name: atomic_habits_db  # Имя контейнера
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}  # Значение переменной окружения POSTGRES_USER
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Значение переменной окружения POSTGRES_PASSWORD
+      POSTGRES_DB: ${POSTGRES_DB}  # Значение переменной окружения POSTGRES_DB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Создать том postgres_data из хост-системы в /var/lib/postgresql/data внутри контейнера
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf  # Создать локальный файл postgresql.conf внутри контейнера
+    ports:
+      - "5432:5432"  # Проброс портов с хост-системы на порт контейнера
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready' ]  # Команда для проверки состояния контейнера
+      interval: 10s  # Интервал проверки состояния контейнера
+      timeout: 5s  # Время ожидания ответа от контейнера
+      retries: 5  # Количество попыток проверки
+
+  redis:  # Настройки для сервиса Redis
+    image: redis:7  # Используем образ Redis версии 7
+    container_name: atomic_habits_cache  # Имя контейнера
+    command: >
+      sh -c "redis-server --save 20 1 --loglevel warning"
+    ports:
+      - "6379:6379"  # Проброс портов с хост-системы на порт контейнера
+    healthcheck:
+      test: redis-cli ping  # Команда для проверки состояния контейнера
+      interval: 10s  # Интервал проверки состояния контейнера
+      timeout: 5s  # Время ожидания ответа от контейнера
+      retries: 5  # Количество попыток проверки
+
+  app: # Настройки для сервиса приложения
+    build: .  # Сборка образа из текущего каталога
+    container_name: atomic_habits_cont  # Имя контейнера
+    command: >
+      sh -c "python manage.py migrate
+      && python manage.py add_data_for_DB
+      && python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env  # Переменные окружения из файла .env
+    ports:
+      - '8001:8000'  # Проброс портов с хост-системы на порт контейнера
+    volumes:
+      - .:/app  # Создать текущий каталог внутри контейнера
+    depends_on:
+      db: # Зависимость от сервиса базы данных
+        condition: service_healthy  # Условие: сервис должен быть в состоянии "здоровый"
+      redis: # Зависимость от сервиса Redis
+        condition: service_healthy  # Условие: сервис должен быть в состоянии "здоровый"
+
+  celery: # Настройки для сервиса Celery
+    build: .  # Сборка образа из текущего каталога
+    container_name: atomic_habits_celery  # Имя контейнера
+    command: >
+      sh -c "celery -A config worker -l INFO -S django"
+    depends_on:
+      - app  # Зависимость от сервиса приложения
+      - redis  # Зависимость от сервиса Redis
+
+  celery-beat: # Настройки для сервиса Celery Beat
+    build: .  # Сборка образа из текущего каталога
+    container_name: atomic_habits_celery_beat  # Имя контейнера
+    command: >
+      sh -c "celery -A config beat -l INFO -S django"
+    depends_on:
+      - app  # Зависимость от сервиса приложения
+      - redis  # Зависимость от сервиса Redis
+
+volumes:
+  postgres_data: # Настройки для Docker-тома postgres_data
