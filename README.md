@@ -31,17 +31,25 @@ Atomic Habits - это веб-приложение, которое помога�
     3. Настройте файл .env: Создайте файл .env в корневой директории проекта и добавьте в него переменные среды, 
         например:
 
-        SECRET_KEY='your_secret_key'
-        HOST='localhost'
-        DATABASE='your_database_name'
-        USER='your_database'
-        PASSWORD='your_database_password'
-        ADMIN_PASSWORD='your_admin_password'
-        CHAT_ID_ADMIN='your_chat_id'
-        EMAIL_HOST_USER='your_email_address'
-        EMAIL_HOST_PASSWORD='your_email_password'
-        TELEGRAM_API_TOKEN='your_telegram_api_token'
-        CHAT_ID_USER='user_chat_id'
+        SECRET_KEY=your_secret_key
+
+        POSTGRES_HOST=localhost
+        POSTGRES_DB=your_database_name
+        POSTGRES_USER=your_database
+        POSTGRES_PASSWORD=your_database_password
+        POSTGRES_PORT=5432
+
+        ADMIN_PASSWORD=your_admin_password
+        CHAT_ID_ADMIN=your_chat_id
+
+        EMAIL_HOST_USER=your_email_address
+        EMAIL_HOST_PASSWORD=your_email_password
+
+        TELEGRAM_API_TOKEN=your_telegram_api_token
+        CHAT_ID_USER=user_chat_id
+
+        CELERY_BROKER_URL=redis://localhost:6379
+        CELERY_RESULT_BACKEND=redis://localhost:6379
 
     4. Выполните миграции для создания базы данных:
 
@@ -88,6 +96,37 @@ Atomic Habits - это веб-приложение, которое помога�
 
     celery -A atomic_habits worker -l info -P eventlet
     celery -A atomic_habits beat
+
+Для запуска проекта в Docker необходимо выполнить следующие шаги:
+
+    1. Настройте файл .env: Создайте файл .env в корневой директории проекта и добавьте в него переменные среды, 
+        например:
+
+        SECRET_KEY=your_secret_key
+
+        POSTGRES_HOST=db
+        POSTGRES_DB=your_database_name
+        POSTGRES_USER=your_database
+        POSTGRES_PASSWORD=your_database_password
+        POSTGRES_PORT=5432
+
+        ADMIN_PASSWORD=your_admin_password
+        CHAT_ID_ADMIN=your_chat_id
+
+        EMAIL_HOST_USER=your_email_address
+        EMAIL_HOST_PASSWORD=your_email_password
+
+        TELEGRAM_API_TOKEN=your_telegram_api_token
+        CHAT_ID_USER=user_chat_id
+
+        CELERY_BROKER_URL=redis://redis:6379
+        CELERY_RESULT_BACKEND=redis://redis:6379
+
+    2. Для создания образа из Dockerfile и запуска контейнера запустите команду:
+
+        docker-compose up --build 
+        или
+        docker-compose up -d --build (для запуска в фоновом режиме)
 
 Автор проекта: Юрий Огородник
 
